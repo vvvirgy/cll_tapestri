@@ -29,19 +29,38 @@ wgs_muts = dfs["X_Tapestry"]
 
 # h5 files to be read 
 h5_path = "/orfeo/LTS/CDSLab/LT_storage/CLL/scDNA/h5_file/"
-files = glob.glob(h5_path+"*.h5")
+
+samples = ["CT287","TS187","CT339","CT344","CT48","CT525","CZ40"] # ,"RM238"] removed bc not sure which time point the h5 file refers to 
+
+# prepare the input for the extraction of data
+metadata = {}
+
+for i in samples:
+    file = glob.glob(h5_path+"*"+i+"*")
+    for n in range(len(file)):
+        time_point = re.findall("_T[1-3]", file[n], re.IGNORECASE)
+        sample_type = re.findall("neg|pos", file[n], re.IGNORECASE)
+        
+        if((len(time_point) > 0) and (len(sample_type) > 0)):
+            time_point = re.sub("_", "", time_point[0])
+            sample_type = sample_type[0]
+        
+            res = {"path" : file[n], 
+                "patient" : i, 
+                "sample" : time_point + "_" + sample_type.lower()}
+
+            metadata[i + "_" + time_point + "_" + sample_type.lower()] = res
+
 
 
 # maxi function to extract data and get the ccfs of specific mutations
-def get_portion_cells(h5path, # path of the h5 files
-                      patient, # patient
-                      sample, # sample
+def get_portion_cells(metadata_dict, # dictionary with information on patient, sample and path of the h5 file
                       ids_file, # table with the mutations and ccf from bulk 
                       whitelist = True, # should we use a whitelist? 
                       filt = False # should we filter the variants?
                      ): 
-    patient_id = patient
-    sample_id = sample
+    patient_id = metadata_dict["patient"]
+    sample_id = metadata_dict["sample"]
     cff_name = "CCF_" + sample_id
     muts = ids_file[(ids_file["Case"]==patient_id) & (ids_file["TAPESTRI"]=="YES") & (ids_file[cff_name]!=0)]
     muts["Tapestri_id"] = muts[['Chr','Start','Ref','Var']].apply(lambda x : '{}:{}:{}/{}'.format(x[0],x[1],x[2],x[3]), axis=1)
@@ -54,7 +73,7 @@ def get_portion_cells(h5path, # path of the h5 files
     # load one sample for testing
 
     # Load the data
-    sample = ms.load(h5path, 
+    sample = ms.load(metadata_dict["path"], 
                      raw=False, 
                      filter_variants=filt, 
                      single=True, 
@@ -93,14 +112,26 @@ def get_portion_cells(h5path, # path of the h5 files
         props.setdefault(1, 0)
            
         result[mut] = props[1]+props[2]
-        
-    CCF_table = pd.DataFrame.from_dict(result, orient="index", columns=["CCF_" + patient_id + "_" + sample_id])
-    return CCF_table
 
-# example run
-df = get_portion_cells("/orfeo/LTS/CDSLab/LT_storage/CLL/scDNA/h5_file/CT339_T2_POS_Test_11.dna.h5", 
-                  patient = "CT339", 
-                  sample = "T2_pos", # sample
-                  ids_file = wgs_muts, # table with the mutations and ccf from bulk 
-                  whitelist = True, # should we use a whitelist? 
-                  filt = False)
+    # add VAF? report also them in the final table
+        
+    CCF_table = pd.DataFrame.from_dict(result, orient="index", columns=["Tapestri_CCF_" + patient_id + "_" + sample_id])
+    CCF_table['mutation'] = CCF_table.index
+
+    bulk_reduced = muts[["Tapestri_id", cff_name]]
+    bulk_reduced.rename(columns = {cff_name : "Bulk_" + cff_name})
+
+    CCF_table_final = pd.merge(left=CCF_table, right=bulk_reduced, left_on='mutation', right_on='Tapestri_id')
+    #CCF_table_final = CCF_table_final[['mutation', "Tapestri_CCF_" + patient_id + "_" + sample_id, "Bulk_" + cff_name]]
+    return CCF_table_final
+
+# produce the data
+os.mkdir("excel_positions")
+results_ccf = {}
+
+for i in metadata.keys():
+    results_ccf[i] = get_portion_cells(metadata_dict = metadata[i],
+                       ids_file = wgs_muts, # table with the mutations and ccf from bulk 
+                       whitelist = True, # should we use a whitelist? 
+                       filt = False)
+    results_ccf[i].to_csv("excel_positions/" + i + "_comparison_tapestri_vs_bulk_excel_positions.csv")

@@ -237,7 +237,7 @@ generate_heatmap = function(patient_name,
                             clusters_legend, 
                             ht_cols, 
                             samples_cols, 
-                            path_ht) {
+                            path_ht = NULL) {
   
   get_ordered_mutations = function(x, clusters_legend){
     
@@ -289,8 +289,13 @@ generate_heatmap = function(patient_name,
                                cluster_row_slices = F, 
                                # column_split = factor(all_samples, levels = all_samples %>% unique), 
                                top_annotation = sample_ann)
-  
-  pdf(paste0(path_ht, "/", patient_name, "_heatmap_genotypes.pdf"), width = 8, height = 10)
-  draw(ht, heatmap_legend_side = "bottom", annotation_legend_side = "bottom")
-  graphics.off()
+
+  if(!is.null(path_ht)) {
+    
+    pdf(paste0(path_ht, "/", patient_name, "_heatmap_genotypes.pdf"), width = 8, height = 10)
+    draw(ht, heatmap_legend_side = "bottom", annotation_legend_side = "bottom")
+    graphics.off()
+  } else {
+    return(ht)
+  }
 }

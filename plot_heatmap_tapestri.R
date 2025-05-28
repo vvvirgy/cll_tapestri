@@ -20,7 +20,7 @@ tapestri_filtered = lapply(tapestri_filtered, compute_tapestri_CCF)
 # load the bulk information
 bulk_data = readxl::read_excel("/orfeo/LTS/CDSLab/LT_storage/CLL/scDNA/h5_file/Tapestry CLL Targeted Panel.xlsx", sheet = 10)
 # excel_file = readxl::read_excel("~/Desktop/LTS_cdslab/Tapestry CLL Targeted Panel.xlsx", sheet = 10)
-# excel_file = readxl::read_excel("~/Desktop/cdslab_lts/vgazziero/Tapestry CLL Targeted Panel.xlsx", sheet = 10)
+# bulk_data = readxl::read_excel("~/Desktop/cdslab_lts/vgazziero/Tapestry CLL Targeted Panel.xlsx", sheet = 10)
 
 bulk_data = bulk_data %>% 
   dplyr::mutate(nd...1 = NULL, nd...41 = NULL) %>% 
@@ -94,7 +94,7 @@ pt_genotypes = lapply(pt_sampl$samples_t, function(x) {
 names(pt_genotypes) = pt_sampl$samples_t
 
 
-lapply(names(pt_data), function(x) {
+heatmaps = lapply(names(pt_data), function(x) {
   
   generate_heatmap(patient_name = x, 
                    patient_data = pt_data[[x]], 
@@ -102,9 +102,12 @@ lapply(names(pt_data), function(x) {
                    clusters_legend = colors_clusters_by_patient[[x]], 
                    ht_cols = cols, 
                    samples_cols = samples_cols, 
-                   path_ht = "genotyping_results/reports_heatmaps")
+                   # path_ht = "genotyping_results/reports_heatmaps")
+                   path_hy = NULL)
 
 })
+
+names(heatmaps) = names(pt_data)
 
 # stats 
 

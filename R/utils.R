@@ -123,7 +123,7 @@ compute_tapestri_CCF = function(x, thr_ccf = 0.1) {
     dplyr::mutate(quality_ccf = 
                     case_when(diff_abs <= thr_ccf ~ "good", 
                               diff_abs > thr_ccf ~ "bad", 
-                              is.na(diff_abs) ~ "not present in tapestri"))
+                              is.na(diff_abs) ~ "not present in tapestri/filtered out"))
   
   x$variants_info = x$variants_info %>% 
     dplyr::mutate(X = NULL)

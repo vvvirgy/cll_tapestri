@@ -1,4 +1,45 @@
 # stats
+library(tidyverse)
+library(patchwork)
+library(ComplexHeatmap)
+library(ggplotify)
+library(rcartocolor)
+# library(gt)
+# library(dendextend)
+
+source("cll_tapestri/00.auxiliary_functions.R")
+source("cll_tapestri/clusters_colors.R")
+
+bulk_data = readRDS('bulk_data_mutations.rds')
+tapestri_data = readRDS('tapestri_data_all_samples.rds')
+
+# filter the results to get only good mutations and cells, then recalculate the CCFs
+tapestri_filtered = lapply(tapestri_data, function(x) {filter_tapestri(x, filter_cells = F, filter_ids = F)})
+
+# compute CCFs after the filtering
+tapestri_filtered = lapply(tapestri_filtered, compute_tapestri_CCF)
+
+# get all the time points
+all_patients_time_points = all_patients = tapestri_filtered %>% 
+  names %>% 
+  gsub("_neg|_pos", "", .) %>%   
+  unique
+
+pt_sampl = dplyr::tibble(
+  patient = all_patients_time_points %>% gsub("_T[2|3]$", "", .), 
+  samples_t = all_patients_time_points
+)
+
+pt_data = lapply(pt_sampl$samples_t, function(x) {
+  p = pt_sampl %>% 
+    filter(samples_t == x) %>% 
+    pull(patient)
+  print(p)
+  get_patient_data(tapestri_results = tapestri_filtered, patient = p, sample_t = x, bulk_data = bulk_data)
+})
+
+names(pt_data) = pt_sampl$samples_t
+
 
 pt_data = lapply(pt_data, function(x) {
   x %>% 
